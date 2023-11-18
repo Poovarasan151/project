@@ -9,6 +9,8 @@ import org.springframework.data.mongodb.core.MongoDataIntegrityViolationExceptio
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 import test.com.traninigapp.dto.UserDto;
 import test.com.traninigapp.model.User;
 import test.com.traninigapp.reository.UserRepo;
@@ -27,41 +29,41 @@ public class UserService {
     public ResponseEntity<Object> saveUser(UserDto dto)
     {
         User user = new User();
-        if(dto.getFullName()==null || dto.getFullName().isEmpty()) {
-            return new ResponseEntity<>("Full name required",HttpStatus.BAD_REQUEST);
+        if(!StringUtils.hasLength(dto.getFullName())) {
+            return badRequestExceptionResponse("Full name required");
         }
         user.setFullName(dto.getFullName());
 
         if(dto.getAge()==0) {
-            return new ResponseEntity<>("Age required",HttpStatus.BAD_REQUEST);
+            return badRequestExceptionResponse("Age required");
         }
         user.setAge(dto.getAge());
 
         if(dto.getEmail()==null || dto.getEmail().isEmpty()) {
-            return new ResponseEntity<>("Email required",HttpStatus.BAD_REQUEST);
+            return badRequestExceptionResponse("Email required");
         }
 
             user.setEmail((dto.getEmail()));
 
 
         if(dto.getPassword()==null || dto.getPassword().isEmpty()) {
-            return new ResponseEntity<>("Password required",HttpStatus.BAD_REQUEST);
+            return badRequestExceptionResponse("Password required");
         }
         user.setPassword(dto.getPassword());
 
         if(dto.getDateOfBirth()==null) {
-            return new ResponseEntity<>("Date Of Birth required",HttpStatus.BAD_REQUEST);
+            return badRequestExceptionResponse("Date Of Birth required");
         }
         user.setDateOfBirth(dto.getDateOfBirth());
 
-        if(dto.getHobbyList()==null || dto.getHobbyList().isEmpty()) {
-            return new ResponseEntity<>("password required",HttpStatus.BAD_REQUEST);
+        if(CollectionUtils.isEmpty(dto.getHobbyList())) {
+            return badRequestExceptionResponse("password required");
         }
         List<String> str = new ArrayList<>(dto.getHobbyList());
         user.setHobbyList(str);
 
         if(dto.getSkillSet()==null || dto.getSkillSet().isEmpty()) {
-            return new ResponseEntity<>("password required",HttpStatus.BAD_REQUEST);
+            return badRequestExceptionResponse("password required");
         }
         Set<String> string = new HashSet<>(dto.getSkillSet());
         user.setSkillSet(string);
@@ -69,13 +71,17 @@ public class UserService {
             userRepo.save(user);
         }
         catch(org.springframework.dao.DuplicateKeyException e ) {
-               return new ResponseEntity<>("mail already exists", HttpStatus.BAD_REQUEST);
+               return badRequestExceptionResponse("mail already exists");
         }
 
 
         return new ResponseEntity(user.getFullName()+" user is created successfully", HttpStatus.CREATED);
     }
 
+    
+    private ResponseEntity badRequestExceptionResponse(String error) {
+        return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+    }
     public  ResponseEntity<Object> updateUser(UserDto dto, String id) {
         User user= userRepo.findById(id).get();
         if(dto.getId()!=null) {
@@ -127,7 +133,11 @@ public class UserService {
 
 
     public ResponseEntity<UserDto> getById(String id) {
-        User user= userRepo.findById(id).get();
+        Optional<User> optionalUser= userRepo.findById(id);
+        if(optionalUser.isEmpty()) {
+            return badRequestExceptionResponse("Requested user not found");
+        }
+        User user = optionalUser.get();
         UserDto userDto = new UserDto();
         userDto.setFullName(user.getFullName());
         userDto.setId(user.getId());
